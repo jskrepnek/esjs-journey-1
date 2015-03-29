@@ -1,0 +1,12 @@
+<div ng-controller="View1Ctrl as view1">
+    <div>
+        <form ng-submit="view1.post(content)">
+            <h2>Enter a new message:</h2>
+            <input ng-model="content"/>
+            <button type="submit">Post It</button>
+        </form>
+    </div>
+    <div ng-repeat="message in view1.messages">
+        {{message.content}} at {{message.dateTime}}
+    </div>
+</div>
