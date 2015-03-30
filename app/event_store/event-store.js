@@ -19,17 +19,11 @@ angular.module('eventStore', [])
             var getEntryPromises = [];
 
             entries.reverse().forEach(function (entry) {
-                var entryUri = null;
-
-                entry.links.forEach(function (link) {
-                    if (link.relation === "alternate") {
-                        entryUri = link.uri;
-                    }
-                });
+                var alternateLink = getLink(entry.links, "alternate");
 
                 var entryPromise =
                     $http
-                        .get(entryUri)
+                        .get(alternateLink.uri)
                         .success(function (data) {
                             onEntry(data);
                         });
@@ -49,24 +43,46 @@ angular.module('eventStore', [])
                 .success(function (data) {
                     processEntries(data.entries, onEvent)
                         .then(function () {
-                            var previousLinkUri = null;
+                            var previousLink = getLink(data.links, "previous");
 
-                            data.links.forEach(function (link) {
-                                if (link.relation === "previous") {
-                                    previousLinkUri = link.uri;
-                                }
-                            });
-
-                            if (previousLinkUri) {
-                                processPrevUri(previousLinkUri, onEvent);
+                            if (previousLink) {
+                                processPrevUri(previousLink.uri, onEvent);
                             } else {
                                 $timeout(function () {
                                     processPrevUri(prevUri, onEvent);
-                                }, 3000);
+                                }, 50);
                             }
                         });
                 });
         };
+
+        getLast = function (streamName) {
+            var defer = $q.defer();
+            $http
+                .get(url + streamName, {
+                    headers: {
+                        'Accept': 'application/vnd.eventstore.atom+json'
+                    }
+                })
+                .success(function (data) {
+                    lastLink = getLink(data.links, "last");
+                    if (!lastLink) {
+                        lastLink = getLink(data.links, "self");
+                    }
+                    defer.resolve(lastLink);
+                });
+            return defer.promise;
+        }
+
+        getLink = function(links, type) {
+            var result = null;
+            links.forEach(function (link) {
+                if (link.relation === type) {
+                    result = link;
+                }
+            });
+            return result;
+        }
 
         var exports = {
 
@@ -86,7 +102,10 @@ angular.module('eventStore', [])
             },
 
             subscribeToStream: function (streamName, onEvent) {
-                processPrevUri(url + streamName, onEvent);
+                getLast(streamName)
+                    .then(function (lastLink) {
+                        processPrevUri(lastLink.uri, onEvent);
+                    });
             }
         };
 
