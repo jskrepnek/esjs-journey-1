@@ -15,8 +15,30 @@ angular.module('eventStore', [])
 
     var url = 'http://127.0.0.1:2113/streams/';
 
+    processEntries = function (entries, onEntry) {
+        var getEntryPromises = [];
+        entries.reverse().forEach(function (entry) {
+            var entryUri = null;
+            entry.links.forEach(function (link) {
+                if (link.relation === "alternate") {
+                    entryUri = link.uri;
+                }
+            });
+            var entryPromise = $http({
+                method: 'GET',
+                url: entryUri,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).success(function (data) {
+                onEntry(data);
+            });
+            getEntryPromises.push(entryPromise);
+        });
+        return getEntryPromises;
+    };
+
     processPrevUri = function (prevUri, onEvent) {
-        console.log('Processing previous uri: ' + prevUri);
         $http({
             method: 'GET',
             url: prevUri,
@@ -24,27 +46,7 @@ angular.module('eventStore', [])
                 'Content-Type': 'vnd.eventstore.atom+json'
             }
         }).success(function (data) {
-            var entryPromises = [];
-            data.entries.reverse().forEach(function (entry) {
-                var entryUrl = null;
-                entry.links.forEach(function (link) {
-                    if (link.relation === "alternate") {
-                        entryUrl = link.uri;
-                    }
-                });
-                console.log('Processing entry at uri: ' + entryUrl);
-                var entryPromise = $http({
-                    method: 'GET',
-                    url: entryUrl,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }).success(function (data) {
-                    onEvent(data);
-                });
-                entryPromises.push(entryPromise);
-            });
-            $q.all(entryPromises).then(function () {
+            $q.all(processEntries(data.entries, onEvent)).then(function () {
                 var previous = null;
                 data.links.forEach(function (link) {
                     if (link.relation === "previous") {
