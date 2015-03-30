@@ -65,14 +65,29 @@ angular.module('eventStore', [])
                     }
                 })
                 .success(function (data) {
-                    lastLink = getLink(data.links, "last");
+                    var lastLink = getLink(data.links, "last");
                     if (!lastLink) {
                         lastLink = getLink(data.links, "self");
                     }
                     defer.resolve(lastLink);
                 });
             return defer.promise;
-        }
+        };
+
+        getPrevious = function(streamName) {
+            var defer = $q.defer();
+            $http
+                .get(url + streamName, {
+                    headers: {
+                        'Accept': 'application/vnd.eventstore.atom+json'
+                    }
+                })
+                .success(function (data) {
+                    var previousLink = getLink(data.links, "previous");
+                    defer.resolve(previousLink);
+                });
+            return defer.promise;
+        };
 
         getLink = function(links, type) {
             var result = null;
@@ -102,9 +117,9 @@ angular.module('eventStore', [])
             },
 
             subscribeToStream: function (streamName, onEvent) {
-                getLast(streamName)
-                    .then(function (lastLink) {
-                        processPrevUri(lastLink.uri, onEvent);
+                getPrevious(streamName)
+                    .then(function(previousLink) {
+                        processPrevUri(previousLink.uri, onEvent);
                     });
             }
         };
