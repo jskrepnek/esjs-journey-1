@@ -1,15 +1,19 @@
 angular.module('eventStore', [])
 
-.factory('EventStore', function ($http, $q, $timeout) {
+.factory('guid', function() {
+    return {
+        new : function () {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+                return v.toString(16);
+            });
+        }
+    }
+})
+
+.factory('EventStore', function ($http, $q, $timeout, guid) {
 
     var url = 'http://127.0.0.1:2113/streams/';
-
-    function guid() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
-            return v.toString(16);
-        });
-    }
 
     processPrevUri = function (prevUri, onEvent) {
         console.log('Processing previous uri: ' + prevUri);
@@ -65,7 +69,7 @@ angular.module('eventStore', [])
                 method: 'POST',
                 url: url + streamName,
                 data: [{
-                    eventId: guid(),
+                    eventId: guid.new(),
                     eventType: eventType,
                     data: eventData
                 }],
