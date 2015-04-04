@@ -2,7 +2,8 @@ angular.module('eventStore', ['guid', 'base64'])
 
     .factory('EventStore', function ($http, $q, $timeout, guid, Base64) {
 
-        var url = 'http://127.0.0.1:2113/streams/',
+        var //url = 'http://evtstr-subbed.cloudapp.net:2113/streams/',
+            url = 'http://localhost:2113/streams/',
             token = Base64.encode('messager:messager');
 
         processEntries = function (entries, onEntry) {
@@ -45,7 +46,7 @@ angular.module('eventStore', ['guid', 'base64'])
                             } else {
                                 $timeout(function () {
                                     processPrevUri(prevUri, onEvent);
-                                }, 50);
+                                }, 500);
                             }
                         });
                 });
