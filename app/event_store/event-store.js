@@ -1,19 +1,9 @@
-angular.module('eventStore', [])
+angular.module('eventStore', ['guid', 'base64'])
 
-    .factory('guid', function () {
-        return {
-            new: function () {
-                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                    return v.toString(16);
-                });
-            }
-        }
-    })
+    .factory('EventStore', function ($http, $q, $timeout, guid, Base64) {
 
-    .factory('EventStore', function ($http, $q, $timeout, guid) {
-
-        var url = 'http://127.0.0.1:2113/streams/';
+        var url = 'http://127.0.0.1:2113/streams/',
+            token = Base64.encode('messager:messager');
 
         processEntries = function (entries, onEntry) {
             var getEntryPromises = [];
@@ -23,7 +13,11 @@ angular.module('eventStore', [])
 
                 var entryPromise =
                     $http
-                        .get(alternateLink.uri)
+                        .get(alternateLink.uri, {
+                            headers: {
+                                'Authorization': 'Basic ' + token
+                            }
+                        })
                         .success(function (data) {
                             onEntry(data);
                         });
@@ -37,7 +31,8 @@ angular.module('eventStore', [])
             $http
                 .get(prevUri, {
                     headers: {
-                        'Content-Type': 'vnd.eventstore.atom+json'
+                        'Content-Type': 'vnd.eventstore.atom+json',
+                        'Authorization': 'Basic ' + token
                     }
                 })
                 .success(function (data) {
@@ -61,6 +56,7 @@ angular.module('eventStore', [])
             $http
                 .get(url + streamName, {
                     headers: {
+                        'Authorization': 'Basic ' + token,
                         'Accept': 'application/vnd.eventstore.atom+json'
                     }
                 })
@@ -74,11 +70,12 @@ angular.module('eventStore', [])
             return defer.promise;
         };
 
-        getPrevious = function(streamName) {
+        getPrevious = function (streamName) {
             var defer = $q.defer();
             $http
                 .get(url + streamName, {
                     headers: {
+                        'Authorization': 'Basic ' + token,
                         'Accept': 'application/vnd.eventstore.atom+json'
                     }
                 })
@@ -89,7 +86,7 @@ angular.module('eventStore', [])
             return defer.promise;
         };
 
-        getLink = function(links, type) {
+        getLink = function (links, type) {
             var result = null;
             links.forEach(function (link) {
                 if (link.relation === type) {
@@ -97,7 +94,7 @@ angular.module('eventStore', [])
                 }
             });
             return result;
-        }
+        };
 
         var exports = {
 
@@ -111,6 +108,7 @@ angular.module('eventStore', [])
 
                 $http.post(streamUrl, data, {
                     headers: {
+                        'Authorization': 'Basic ' + token,
                         'Content-Type': 'application/vnd.eventstore.events+json'
                     }
                 })
@@ -118,7 +116,7 @@ angular.module('eventStore', [])
 
             subscribeToStream: function (streamName, onEvent) {
                 getPrevious(streamName)
-                    .then(function(previousLink) {
+                    .then(function (previousLink) {
                         processPrevUri(previousLink.uri, onEvent);
                     });
             }
@@ -126,4 +124,5 @@ angular.module('eventStore', [])
 
         return exports;
     });
+
 
